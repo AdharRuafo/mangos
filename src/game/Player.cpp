@@ -60,6 +60,7 @@
 #include "Spell.h"
 #include "SocialMgr.h"
 #include "AchievementMgr.h"
+#include "mangchat/IRCClient.h"
 
 #include <cmath>
 
@@ -1892,6 +1893,8 @@ void Player::AddToWorld()
         if(m_items[i])
             m_items[i]->AddToWorld();
     }
+	if(sIRC.ajoin == 1)
+	  sIRC.AutoJoinChannel(this);	
 }
 
 void Player::RemoveFromWorld()
@@ -2461,6 +2464,18 @@ void Player::GiveLevel(uint32 level)
     InitGlyphsForLevel();
 
     UpdateAllStats();
+
+    if((sIRC.BOTMASK & 64) != 0)
+    {
+        char  temp [5];
+        sprintf(temp, "%u", level);
+        std::string plevel = temp;
+        std::string pname = GetName();
+        std::string ircchan = "#";
+        ircchan += sIRC._irc_chan[sIRC.Status].c_str();
+        sIRC.Send_IRC_Channel(ircchan, "\00311["+pname+"] : Has Reached Level: "+plevel, true);
+    }
+
 
     // set current level health and mana/energy to maximum after applying all mods.
     SetHealth(GetMaxHealth());

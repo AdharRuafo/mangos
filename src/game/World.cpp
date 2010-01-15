@@ -62,6 +62,7 @@
 #include "WaypointManager.h"
 #include "GMTicketMgr.h"
 #include "Util.h"
+#include "mangchat/IRCClient.h"
 
 INSTANTIATE_SINGLETON_1( World );
 
@@ -1478,6 +1479,9 @@ void World::SetInitialWorldSettings()
     loginDatabase.PExecute("INSERT INTO uptime (realmid, starttime, startstring, uptime) VALUES('%u', " UI64FMTD ", '%s', 0)",
         realmID, uint64(m_startTime), isoDate);
 
+	static uint32 autoanc = 1;
+    autoanc = sIRC.autoanc;
+
     m_timers[WUPDATE_OBJECTS].SetInterval(0);
     m_timers[WUPDATE_SESSIONS].SetInterval(0);
     m_timers[WUPDATE_WEATHERS].SetInterval(1*IN_MILISECONDS);
@@ -1486,6 +1490,8 @@ void World::SetInitialWorldSettings()
                                                             //Update "uptime" table based on configuration entry in minutes.
     m_timers[WUPDATE_CORPSES].SetInterval(20*MINUTE*IN_MILISECONDS);
                                                             //erase corpses every 20 minutes
+	m_timers[WUPDATE_AUTOANC].SetInterval(autoanc*MINUTE*1000); 
+															//handles IRC autoannouncements
 
     //to set mailtimer to return mails every day between 4 and 5 am
     //mailtimer is increased when updating auctions
@@ -1681,6 +1687,12 @@ void World::Update(uint32 diff)
         m_timers[WUPDATE_EVENTS].Reset();
     }
 
+	/// -Process IRC Autoannoucments
+    if (m_timers[WUPDATE_AUTOANC].Passed())
+    {
+        m_timers[WUPDATE_AUTOANC].Reset();
+        SendRNDBroadcast();
+    }	
     /// </ul>
     ///- Move all creatures with "delayed move" and remove and delete all objects with "delayed remove"
     sMapMgr.DoDelayedMovesAndRemoves();
@@ -2091,7 +2103,22 @@ void World::ProcessCliCommands()
     if (zprint)
         zprint("mangos>");
 }
-
+// This handles the broadcast of IRC annoucements
+void World::SendRNDBroadcast()
+{
+    std::string msg;
+    QueryResult *result = WorldDatabase.PQuery("SELECT `message` FROM `IRC_AutoAnnounce` ORDER BY RAND() LIMIT 1");
+    if(!result)
+        return;
+    msg = result->Fetch()[0].GetString();
+    delete result;
+    std::string str = "|cffff0000[Automatic]:|r";
+    str += msg;
+    sWorld.SendWorldText(3000,msg.c_str()); //the number before msg.cstr() is a mangos string. So you can put in your own mangos string with unique id and make your announcement any color or show anyway you want in wow by altering the mangos_string table
+    std::string ircchan = "#";
+    ircchan += sIRC._irc_chan[sIRC.anchn].c_str();
+	sIRC.Send_IRC_Channel(ircchan, sIRC.MakeMsg("\00304,08\037/!\\\037\017\00304 Automatic System Message \00304,08\037/!\\\037\017 %s", "%s", msg.c_str()), true);
+}
 void World::InitResultQueue()
 {
     m_resultQueue = new SqlResultQueue;

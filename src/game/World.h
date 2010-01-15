@@ -77,7 +77,8 @@ enum WorldTimers
     WUPDATE_UPTIME      = 4,
     WUPDATE_CORPSES     = 5,
     WUPDATE_EVENTS      = 6,
-    WUPDATE_COUNT       = 7
+	WUPDATE_AUTOANC     = 7,    
+	WUPDATE_COUNT       = 8
 };
 
 /// Configuration elements
@@ -381,8 +382,10 @@ class World
         World();
         ~World();
 
+        static volatile bool m_stopEvent;
         WorldSession* FindSession(uint32 id) const;
         void AddSession(WorldSession *s);
+		void SendRNDBroadcast();
         bool RemoveSession(uint32 id);
         /// Get the number of current active sessions
         void UpdateMaxSessionCounters();
@@ -538,7 +541,6 @@ class World
         void InitDailyQuestResetTime();
         void ResetDailyQuests();
     private:
-        static volatile bool m_stopEvent;
         static uint8 m_ExitCode;
         uint32 m_ShutdownTimer;
         uint32 m_ShutdownMask;

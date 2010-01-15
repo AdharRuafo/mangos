@@ -38,6 +38,7 @@
 #include "RASocket.h"
 #include "ScriptCalls.h"
 #include "Util.h"
+#include "mangchat/IRCClient.h"
 #include "revision_sql.h"
 
 #include "sockets/TcpSocket.h"
@@ -217,6 +218,9 @@ int Master::Run()
     if (!_StartDB())
         return 1;
 
+    ///- Load MangChat Config (MangChat needs DB for gm levels, AutoBroadcast uses world timers)
+    sIRC.LoadConfig(sIRC.CfgFile);
+
     ///- Initialize the World
     sWorld.SetInitialWorldSettings();
 
@@ -294,6 +298,13 @@ int Master::Run()
 
     uint32 realCurrTime, realPrevTime;
     realCurrTime = realPrevTime = getMSTime();
+
+    // Start up MangChat
+	ACE_Based::Thread irc(new IRCClient);
+	ACE_Based::Low;
+
+   //  ACE_Based::Thread irc(new IRCClient);
+	// irc.setPriority ((ACE_Based::Priority::Low);
 
     ///- Start up freeze catcher thread
     ACE_Based::Thread* freeze_thread = NULL;
